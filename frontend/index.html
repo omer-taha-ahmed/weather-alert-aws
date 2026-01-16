@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Alert System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh; 
+            padding: 20px; 
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { color: white; text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        
+        .card { 
+            background: white; 
+            border-radius: 12px; 
+            padding: 25px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+        }
+        .card h2 { color: #333; margin-bottom: 20px; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #333; font-weight: 500; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        input:focus, select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+        
+        button { 
+            background: #667eea; 
+            color: white; 
+            padding: 12px 25px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            transition: all 0.3s; 
+            width: 100%; 
+        }
+        button:hover { background: #764ba2; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }
+        button.delete { background: #e74c3c; width: auto; padding: 8px 15px; font-size: 12px; }
+        button.delete:hover { background: #c0392b; }
+        
+        .message { padding: 12px; border-radius: 6px; margin-bottom: 15px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        
+        .subscription-item { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-bottom: 10px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .sub-info { flex-grow: 1; }
+        .sub-info p { margin: 5px 0; color: #666; }
+        .sub-email { font-weight: 600; color: #333; }
+        .sub-city { color: #667eea; }
+        .sub-condition { color: #764ba2; }
+        
+        .loading { opacity: 0.6; pointer-events: none; }
+        .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #f3f3f3; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌤️ Weather Alert System</h1>
+            <p>Subscribe to weather conditions and receive automatic email alerts</p>
+        </div>
+        
+        <!-- Subscribe Form -->
+        <div class="card">
+            <h2>📝 Subscribe to Weather Alerts</h2>
+            <div id="subscribeMessage"></div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" placeholder="your.email@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="city">City</label>
+                    <input type="text" id="city" placeholder="e.g., New York, London">
+                </div>
+                <div class="form-group">
+                    <label for="condition">Alert Condition</label>
+                    <select id="condition">
+                        <option value="">Select condition...</option>
+                        <option value="rain">Rain</option>
+                        <option value="snow">Snow</option>
+                        <option value="temp < 0">Freezing (Below 0°C)</option>
+                        <option value="temp < 5">Cold (Below 5°C)</option>
+                        <option value="temp > 30">Hot (Above 30°C)</option>
+                        <option value="temp > 35">Very Hot (Above 35°C)</option>
+                        <option value="wind > 10">Windy (Above 10 m/s)</option>
+                        <option value="cloudy">Cloudy</option>
+                        <option value="clear">Clear Skies</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="subscribeToWeather()">Subscribe Now</button>
+        </div>
+        
+        <!-- My Subscriptions -->
+        <div class="card">
+            <h2>📋 My Subscriptions</h2>
+            <div id="subscriptionsList"></div>
+        </div>
+    </div>
+
+    <script>
+        // REPLACE WITH YOUR API GATEWAY URL from Step 7
+        const API_URL = 'HERE';
+        
+        // Load subscriptions on page load
+        window.onload = () => {
+            loadSubscriptions();
+            // Refresh every 10 seconds
+            setInterval(loadSubscriptions, 10000);
+        };
+        
+        async function subscribeToWeather() {
+            const email = document.getElementById('email').value.trim();
+            const city = document.getElementById('city').value.trim();
+            const alertCondition = document.getElementById('condition').value;
+            const messageDiv = document.getElementById('subscribeMessage');
+            
+            if (!email || !city || !alertCondition) {
+                showMessage(messageDiv, 'Please fill all fields', 'error');
+                return;
+            }
+            
+            if (!email.includes('@')) {
+                showMessage(messageDiv, 'Please enter valid email', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/subscribe`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        city: city,
+                        alertCondition: alertCondition
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage(messageDiv, '✓ Subscription created! Check your email.', 'success');
+                    document.getElementById('email').value = '';
+                    document.getElementById('city').value = '';
+                    document.getElementById('condition').value = '';
+                    loadSubscriptions();
+                } else {
+                    showMessage(messageDiv, 'Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showMessage(messageDiv, 'Error: ' + error.message, 'error');
+            }
+        }
+        
+        async function loadSubscriptions() {
+            const listDiv = document.getElementById('subscriptionsList');
+            
+            try {
+                const response = await fetch(`${API_URL}/subscriptions`);
+                const subscriptions = await response.json();
+                
+                if (!Array.isArray(subscriptions) || subscriptions.length === 0) {
+                    listDiv.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No subscriptions yet. Create one above!</p>';
+                    return;
+                }
+                
+                let html = '';
+                subscriptions.forEach(sub => {
+                    html += `
+                        <div class="subscription-item">
+                            <div class="sub-info">
+                                <p class="sub-email">📧 ${escapeHtml(sub.email)}</p>
+                                <p class="sub-city">📍 City: ${escapeHtml(sub.city)}</p>
+                                <p class="sub-condition">⚠️ Alert: ${escapeHtml(sub.alertCondition)}</p>
+                            </div>
+                            <button class="delete" onclick="deleteSubscription('${sub.subscriptionId}')">Delete</button>
+                        </div>
+                    `;
+                });
+                listDiv.innerHTML = html;
+            } catch (error) {
+                listDiv.innerHTML = `<div class="message error">Error loading subscriptions: ${error.message}</div>`;
+            }
+        }
+        
+        async function deleteSubscription(subscriptionId) {
+            if (!confirm('Delete this subscription?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/subscribe/${subscriptionId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadSubscriptions();
+                } else {
+                    alert('Error deleting subscription');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        function showMessage(div, message, type) {
+            div.innerHTML = `<div class="message ${type}">${message}</div>`;
+            setTimeout(() => { div.innerHTML = ''; }, 5000);
+        }
+        
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+    </script>
+</body>
+</html>
