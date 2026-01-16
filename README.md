@@ -257,25 +257,6 @@ API Latency:           <200ms average
 Database Size:         ~50MB
 Subscriptions Support: Unlimited (within free tier)
 
----
-
-## 🎯 Interview Questions This Answers
-
-**"Tell me about a serverless project you built..."**
-
-> "I built a weather alert system on AWS. Users subscribe to weather alerts for cities, and my system automatically checks weather daily and sends email notifications.
->
-> The architecture uses Lambda for serverless compute, DynamoDB for storage, SNS for emails, and API Gateway for REST endpoints. Daily at 8 AM UTC, CloudWatch Events triggers the weather checker Lambda to evaluate all subscriptions against real-time OpenWeatherMap API data.
->
-> The cool part: the entire system costs $0/month because it stays within AWS free tier. It's production-ready, fully documented, and handles errors gracefully."
-
-**"How do you handle scale?"**
-
-> "Serverless architecture scales automatically. Lambda auto-scales to millions of concurrent executions. DynamoDB auto-scales read/write capacity. API Gateway handles millions of requests per month. With this design, we could scale 1000x without code changes."
-
-**"What was challenging?"**
-
-> "A few things: Getting Lambda timeout right for external API calls, understanding DynamoDB partition key design, CORS configuration in API Gateway, and safely parsing JSON when request body could be None."
 
 ---
 
